@@ -23,6 +23,7 @@ public class TotalEvent {
     @Temporal(TemporalType.DATE)
     private Date luckyday;
 
+    @Column(nullable = true)
     private int dailyQuota;
 
 

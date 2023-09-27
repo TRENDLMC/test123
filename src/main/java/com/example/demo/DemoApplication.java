@@ -23,6 +23,10 @@ import java.util.Optional;
 @SpringBootApplication
 public class DemoApplication implements CommandLineRunner {
 
+	public int eventnumber=1;//이거를바꿔야할꺼같다.
+
+	SimpleDateFormat simpleDateFormat=new SimpleDateFormat("yyyyMMdd");//데이터베이스와같은형식으로만들어줌
+
 	//오늘 혹은 현재당첨자수를 저장하기위한 변수생성
 	public int first=0;
 	public int second=0;
@@ -57,49 +61,54 @@ public class DemoApplication implements CommandLineRunner {
 	// 데이터베이스에서 가져와 자바변수에 재설정해주기위해서 실행됌.
 	@Override
 	public void run(String... args) throws Exception {
-		for(int i=0; i<5;i++){//업데이트로 두어야하므로 이건 최초 1회만 실행됄수있도록 쿼리와 또사용해야함. 수정해야한다.
-			DailyLimit daily1=DailyLimit.builder().first(4).second(17).third(33).build();
-			DailyLimit daily2=DailyLimit.builder().first(3).second(17).third(33).build();
-			DailyLimit daily3=DailyLimit.builder().first(3).second(16).third(34).build();
-			dailyLimitRepository.saveAll(Arrays.asList(daily1,daily2,daily3));
+		if(dailyLimitRepository.findAll().isEmpty()) {
+			for (int i = 0; i < 5; i++) {//업데이트로 두어야하므로 이건 최초 1회만 실행됄수있도록함.
+				DailyLimit daily1 = DailyLimit.builder().first(4).second(17).third(33).build();
+				DailyLimit daily2 = DailyLimit.builder().first(3).second(17).third(33).build();
+				DailyLimit daily3 = DailyLimit.builder().first(3).second(16).third(34).build();
+				dailyLimitRepository.saveAll(Arrays.asList(daily1, daily2, daily3));
+			}
 		}
-		Date nowDate=new Date();//현재시간을 가져온다
-		SimpleDateFormat simpleDateFormat=new SimpleDateFormat("yyyyMMdd");//데이터베이스와같은형식으로만들어줌
-		String tlrks=simpleDateFormat.format(nowDate);//날짜형태변환.
-		Optional<Integer> firstch=dailyEventRepository.firstcheck(tlrks);//null값예방을 위하여Optinal사용
-		if(firstch.isPresent()){//null이 아닐경우 값을대입 null일경우 위에서 0으로 초기화되었기때문에 0으로 설정됌.
-			first=firstch.get();
-		}
-		Optional<Integer> secondech=dailyEventRepository.secondcheck(tlrks);//위와같은 로직
-		if(secondech.isPresent()){
-			second=secondech.get();
-		}
-		Optional<Integer> thirdch=dailyEventRepository.thirdcheck(tlrks);//위와같은 로직.
-		if(thirdch.isPresent()){
-			third=thirdch.get();
-		}
-		//firstlimit=dailyevent에서 오늘날짜까지 first의값을 가져오고 - firstlimit의 오늘까지의 fisrt의값의 합을 가져와서 뺴서 넣어주면됌
-		//secondlimit=
-		//thirdlimit=
-		firstcut=(int)Math.ceil(firstlimit/7.2); //첫날이나 시작시 당첨인원은 0명이기떄문에
-		secondcut=(int)Math.ceil(secondlimit/7.2);//기본값으로 셋팅이됀다
-		thirdcut=(int)Math.ceil(thirdlimit/7.2); //
-
+		Date nowdate=new Date();
+		String tlrks=simpleDateFormat.format(nowdate);
+		first=dailyEventRepository.firstcheck(tlrks);
+		second=dailyEventRepository.secondcheck(tlrks);
+		third=dailyEventRepository.thirdcheck(tlrks);
+		firstlimit=dailyLimitRepository.totallimitfirstcheck(eventnumber)-dailyEventRepository.totalfirstcheck(tlrks);
+		secondlimit=dailyLimitRepository.totallimitsecondcheck(eventnumber)-dailyEventRepository.totalsecondcheck(tlrks);
+		thirdlimit=dailyLimitRepository.totallimitthirdcheck(eventnumber)-dailyEventRepository.totalthirdcheck(tlrks);
+		secondcut=(int)Math.ceil(secondlimit/7.2);
+		thirdcut=(int)Math.ceil(thirdlimit/7.2);
+		firstcut=(int)Math.ceil(firstlimit/7.2);
+//		System.out.println(first);
+//		System.out.println(second);
+//		System.out.println(third);
+//		System.out.println("--------------------");
+//		System.out.println(firstlimit);
+//		System.out.println(secondlimit);
+//		System.out.println(thirdlimit);
+//		System.out.println("--------------------");
+//		System.out.println(firstcut);
+//		System.out.println(secondcut);
+//		System.out.println(thirdcut);
 	}
 
-	@Scheduled( cron ="00 00 24 15-30 12 * " ) //스케줄러를 사용하여 일단위로 15~30일까지의 확률을 변동시킴과 동시에 데이터베이스에 업데이트함
+	@Scheduled( cron ="59 59 23 15-30 12 * " ) //스케줄러를 사용하여 일단위로 15~30일까지의 확률을 변동시킴과 동시에 데이터베이스에 업데이트함
 	public void every(){
+		Date nowdate=new Date();
+		String tlrks=simpleDateFormat.format(nowdate);
 		TotalEvent total= TotalEvent.builder().luckyday(new Date()).build();
 		totalEventRepository.save(total);//오늘 사용할 값을 미리생성해줌 id만존재 나머지는 null값으로 존재
 		//luckyday에서 -1 을해줘서 어제날짜 기준으로 값을 수정함 수정할것은 daily_quota<<이것은 daliy_event에서 sum으로 이벤트
 		//진행일수 기준으로 가져와서 업데이트해주면됌.
 		//그후 각종 변수값들을 초기화 시켜줌.
-		//first= 레퍼지토리에서 오늘날짜를 기준으로 sum을 사용하여 first의 합을 가져온다.
-		//second=
-		//third=
-		//firstlimit=레퍼지토리에서 오늘날짜까지 모든 first의 합과 오늘날짜까지의 리미트first값을 - 해서 삽입
-		//secondlimit=
-		//thirdlimit=
+		String tlrksup="";//여기는 day에 1일더해서 만들어주어야함
+		first=dailyEventRepository.firstcheck(tlrksup);
+		second=dailyEventRepository.secondcheck(tlrksup);
+		third=dailyEventRepository.thirdcheck(tlrksup);
+		firstlimit=dailyLimitRepository.totallimitfirstcheck(eventnumber)-dailyEventRepository.totalfirstcheck(tlrksup);
+		secondlimit=dailyLimitRepository.totallimitsecondcheck(eventnumber)-dailyEventRepository.totalsecondcheck(tlrksup);
+		thirdlimit=dailyLimitRepository.totallimitthirdcheck(eventnumber)-dailyEventRepository.totalthirdcheck(tlrksup);
 		firstcut=(int)Math.ceil(firstlimit/7.2); // 총이벤트일수 15일동안 총 1~4등당첨을 모두하려면 10800/15=720 이므로
 		secondcut=(int)Math.ceil(secondlimit/7.2);// 하루응모인원 기준을 720명으로 잡고 계산하여
 		thirdcut=(int)Math.ceil(thirdlimit/7.2); //전날과비교하여 1~3등의 당첨이 적을경우 확률을 변동시킨다.

@@ -12,10 +12,17 @@ public interface DailyEventRepository extends JpaRepository<DailyEvent,String> {
 
 
     @Query(value = "select count(*) from daily_event where luckyday=:time and ranks='first'", nativeQuery = true)
-    public Optional<Integer> firstcheck(@Param("time") String time);
+    public int firstcheck(@Param("time") String time);
     @Query(value = "select count(*) from daily_event where luckyday=:time and ranks='second'", nativeQuery = true)
-    public Optional<Integer> secondcheck(@Param("time") String time);
+    public int secondcheck(@Param("time") String time);
     @Query(value = "select count(*) from daily_event where luckyday=:time and ranks='third'", nativeQuery = true)
-    public Optional<Integer> thirdcheck(@Param("time") String time);
+    public int thirdcheck(@Param("time") String time);
+
+    @Query(value = "select count(*) from daily_event de where luckyday between '20231215' and :time and ranks='first'",nativeQuery = true)
+    public int totalfirstcheck(@Param("time")String time);
+    @Query(value = "select count(*) from daily_event de where luckyday between '20231215' and :time and ranks='second'",nativeQuery = true)
+    public int totalsecondcheck(@Param("time")String time);
+    @Query(value = "select count(*) from daily_event de where luckyday between '20231215' and :time and ranks='third'",nativeQuery = true)
+    public int totalthirdcheck(@Param("time")String time);
 
 }
