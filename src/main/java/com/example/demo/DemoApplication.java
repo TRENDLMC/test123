@@ -86,27 +86,16 @@ public class DemoApplication implements CommandLineRunner {
 		secondcut=(int)Math.ceil(secondlimit/7.2);
 		thirdcut=(int)Math.ceil(thirdlimit/7.2);
 		firstcut=(int)Math.ceil(firstlimit/7.2);
-//		System.out.println(first);
-//		System.out.println(second);
-//		System.out.println(third);
-//		System.out.println("--------------------");
-//		System.out.println(firstlimit);
-//		System.out.println(secondlimit);
-//		System.out.println(thirdlimit);
-//		System.out.println("--------------------");
-//		System.out.println(firstcut);
-//		System.out.println(secondcut);
-//		System.out.println(thirdcut);
 	}
 
 	@Scheduled( cron ="59 59 23 15-30 12 * " ) //스케줄러를 사용하여 일단위로 15~30일까지의 확률을 변동시킴과 동시에 데이터베이스에 업데이트함
-	public void every(){
+	public void every()throws Exception{
 		LocalDate currentDate = LocalDate.now();
 		String tlrks=simpleDateFormat.format(currentDate);
 		TotalEvent total1= TotalEvent.builder().luckyday(new Date()).dailyQuota(
 				dailyEventRepository.totalpeple(tlrks)
 		).build();
-		totalEventRepository.save(total);//업데이트 시켜줌
+		totalEventRepository.save(total1);//업데이트 시켜줌
 		LocalDate newDate = currentDate.plusDays(1);
 		String tlrksup=simpleDateFormat.format(newDate);//여기는 day에 1일더해서 만들어주어야함
 		first=dailyEventRepository.firstcheck(tlrksup);
@@ -118,10 +107,8 @@ public class DemoApplication implements CommandLineRunner {
 		firstcut=(int)Math.ceil(firstlimit/7.2); // 총이벤트일수 15일동안 총 1~4등당첨을 모두하려면 10800/15=720 이므로
 		secondcut=(int)Math.ceil(secondlimit/7.2);// 하루응모인원 기준을 720명으로 잡고 계산하여
 		thirdcut=(int)Math.ceil(thirdlimit/7.2); //전날과비교하여 1~3등의 당첨이 적을경우 확률을 변동시킨다.
-		Data tomorroy=simpleDateFormat.parse(tlrksup);
-		TotalEvent total2= TotalEvent.builder().luckyday(new Date()).dailyQuota(
-				dailyEventRepository.totalpeple(tlrks)
-		).build();
+		Date tomorrow=simpleDateFormat.parse(tlrksup);
+		TotalEvent total2= TotalEvent.builder().luckyday(tomorrow).build();
 		totalEventRepository.save(total2);//업데이트 시켜줌
 	}
 
