@@ -46,13 +46,13 @@ public class DemoApplication implements CommandLineRunner {
 
 	//repository사용을 위한 autowired 설정
 	@Autowired
-	private DailyEventRepository dailyEventRepository;
+	private DailyEventRepository EventRepository;
 
 	@Autowired
-	private DailyLimitRepository dailyLimitRepository;
+	private DailyLimitRepository LimitRepository;
 
 	@Autowired
-	private TotalEventRepository totalEventRepository;
+	private TotalEventRepository totalRepository;
 
 
 	public static void main(String[] args) {
@@ -63,57 +63,72 @@ public class DemoApplication implements CommandLineRunner {
 	// 데이터베이스에서 가져와 자바변수에 재설정해주기위해서 실행됌.
 	@Override
 	public void run(String... args) throws Exception {
-		if(totalEventRepository.findAll().isEmpty()){
+		if(totalRepository.findAll().isEmpty()){
 			TotalEvent total= TotalEvent.builder().luckyday(new Date()).build();
-			totalEventRepository.save(total);
+			totalRepository.save(total);
 		}
-		if(dailyLimitRepository.findAll().isEmpty()) {
+		if(LimitRepository.findAll().isEmpty()) {
 			for (int i = 0; i < 5; i++) {//업데이트로 두어야하므로 이건 최초 1회만 실행됄수있도록함.
 				DailyLimit daily1 = DailyLimit.builder().first(4).second(17).third(33).build();
 				DailyLimit daily2 = DailyLimit.builder().first(3).second(17).third(33).build();
 				DailyLimit daily3 = DailyLimit.builder().first(3).second(16).third(34).build();
-				dailyLimitRepository.saveAll(Arrays.asList(daily1, daily2, daily3));
+				LimitRepository.saveAll(Arrays.asList(daily1, daily2, daily3));
 			}
 		}
 		LocalDate currentDate = LocalDate.now();
 		String tlrks=simpleDateFormat.format(currentDate);
-		first=dailyEventRepository.firstcheck(tlrks);
-		second=dailyEventRepository.secondcheck(tlrks);
-		third=dailyEventRepository.thirdcheck(tlrks);
-		firstlimit=dailyLimitRepository.totallimitfirstcheck(eventnumber)-dailyEventRepository.totalfirstcheck(tlrks);
-		secondlimit=dailyLimitRepository.totallimitsecondcheck(eventnumber)-dailyEventRepository.totalsecondcheck(tlrks);
-		thirdlimit=dailyLimitRepository.totallimitthirdcheck(eventnumber)-dailyEventRepository.totalthirdcheck(tlrks);
+
+		first=EventRepository.firstcheck(tlrks);
+		second=EventRepository.secondcheck(tlrks);
+		third=EventRepository.thirdcheck(tlrks);
+
+		firstlimit=LimitRepository.totallimitfirstcheck(eventnumber)-EventRepository.totalfirstcheck(tlrks);
+		secondlimit=LimitRepository.totallimitsecondcheck(eventnumber)-EventRepository.totalsecondcheck(tlrks);
+		thirdlimit=LimitRepository.totallimitthirdcheck(eventnumber)-EventRepository.totalthirdcheck(tlrks);
+
 		secondcut=(int)Math.ceil(secondlimit/7.2);
 		thirdcut=(int)Math.ceil(thirdlimit/7.2);
 		firstcut=(int)Math.ceil(firstlimit/7.2);
 	}
 
-	@Scheduled( cron ="59 59 23 15-30 12 * " ) //스케줄러를 사용하여 일단위로 15~30일까지의 확률을 변동시킴과 동시에 데이터베이스에 업데이트함
+	@Scheduled( cron ="01 00 00 15-30 12 *" ) //스케줄러를 사용하여 일단위로 15~30일까지의 확률을 변동시킴과 동시에 데이터베이스에 업데이트함
 	public void every()throws Exception{
+
+		eventnumber++;
+
 		LocalDate currentDate = LocalDate.now();
 		String tlrks=simpleDateFormat.format(currentDate);
-		TotalEvent total1= TotalEvent.builder().luckyday(new Date()).dailyQuota(
-				dailyEventRepository.totalpeple(tlrks)
-		).build();
-		totalEventRepository.save(total1);//업데이트 시켜줌
+		TotalEvent total1= TotalEvent
+				.builder()
+				.luckyday(new Date())
+				.dailyQuota(EventRepository.totalpeple(tlrks))
+				.build();
+		totalRepository.save(total1);//업데이트 시켜줌
 		LocalDate newDate = currentDate.plusDays(1);
 		String tlrksup=simpleDateFormat.format(newDate);//여기는 day에 1일더해서 만들어주어야함
-		first=dailyEventRepository.firstcheck(tlrksup);
-		second=dailyEventRepository.secondcheck(tlrksup);
-		third=dailyEventRepository.thirdcheck(tlrksup);
-		firstlimit=dailyLimitRepository.totallimitfirstcheck(eventnumber)-dailyEventRepository.totalfirstcheck(tlrksup);
-		secondlimit=dailyLimitRepository.totallimitsecondcheck(eventnumber)-dailyEventRepository.totalsecondcheck(tlrksup);
-		thirdlimit=dailyLimitRepository.totallimitthirdcheck(eventnumber)-dailyEventRepository.totalthirdcheck(tlrksup);
+
+		first=EventRepository.selctFirst_Check(tlrksup);
+		second=EventRepository.selectSecond_Check(tlrksup);
+		third=EventRepository.selectThird_Check(tlrksup);
+
+		firstlimit=LimitRepository.selectTotalFirst_Limit(eventnumber)-EventRepository.selectTotalFirst_Check(tlrksup);
+		secondlimit=LimitRepository.selectTotaLlimitSecondCheck(eventnumber)-EventRepository.selectTotalSecondCheck(tlrksup);
+		thirdlimit=LimitRepository.select_Total_Limit_Third_Check(eventnumber)-EventRepository.selectTotalThirdCheck(tlrksup);
+
 		firstcut=(int)Math.ceil(firstlimit/7.2); // 총이벤트일수 15일동안 총 1~4등당첨을 모두하려면 10800/15=720 이므로
 		secondcut=(int)Math.ceil(secondlimit/7.2);// 하루응모인원 기준을 720명으로 잡고 계산하여
-		thirdcut=(int)Math.ceil(thirdlimit/7.2); //전날과비교하여 1~3등의 당첨이 적을경우 확률을 변동시킨다.
+		thirdcut=(int)Math.ceil(thirdlimit/7.2); //당첨자수와 예상당첨자수를 비교하여 1~3등의 당첨이 적을경우 확률을 변동시킨다.
+
 		Date tomorrow=simpleDateFormat.parse(tlrksup);
 		TotalEvent total2= TotalEvent.builder().luckyday(tomorrow).build();
-		totalEventRepository.save(total2);//업데이트 시켜줌
+		totalRepository.save(total2);//내일꺼만들어줌.
+
 	}
 
 	public String  random(){
+
 		int number = (int) (Math.random() * 720) + 1;
+
 		if(number>=firstcut) {
 			if(first<=firstlimit) {
 				System.out.println("1등당첨 체크용");
@@ -121,6 +136,7 @@ public class DemoApplication implements CommandLineRunner {
 				return "first";
 			}
 		}
+
 		if(number>=secondcut) {
 			if (second <= secondcut) {
 				System.out.println("2등당첨");
@@ -128,13 +144,15 @@ public class DemoApplication implements CommandLineRunner {
 				return "second";
 			}
 		}
+
 		if(number>=thirdcut){
-			if(third<=thirdcut){
+			if(third <= thirdcut){
 				System.out.println("3등당첨");
 				third++;
 				return "third";
 			}
 		}
+
 		return "fourth";
 	}
 }
