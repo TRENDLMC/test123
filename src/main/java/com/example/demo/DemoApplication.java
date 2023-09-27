@@ -13,7 +13,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import javax.xml.crypto.Data;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
@@ -61,6 +63,10 @@ public class DemoApplication implements CommandLineRunner {
 	// 데이터베이스에서 가져와 자바변수에 재설정해주기위해서 실행됌.
 	@Override
 	public void run(String... args) throws Exception {
+		if(totalEventRepository.findAll().isEmpty()){
+			TotalEvent total= TotalEvent.builder().luckyday(new Date()).build();
+			totalEventRepository.save(total);
+		}
 		if(dailyLimitRepository.findAll().isEmpty()) {
 			for (int i = 0; i < 5; i++) {//업데이트로 두어야하므로 이건 최초 1회만 실행됄수있도록함.
 				DailyLimit daily1 = DailyLimit.builder().first(4).second(17).third(33).build();
@@ -69,8 +75,8 @@ public class DemoApplication implements CommandLineRunner {
 				dailyLimitRepository.saveAll(Arrays.asList(daily1, daily2, daily3));
 			}
 		}
-		Date nowdate=new Date();
-		String tlrks=simpleDateFormat.format(nowdate);
+		LocalDate currentDate = LocalDate.now();
+		String tlrks=simpleDateFormat.format(currentDate);
 		first=dailyEventRepository.firstcheck(tlrks);
 		second=dailyEventRepository.secondcheck(tlrks);
 		third=dailyEventRepository.thirdcheck(tlrks);
@@ -95,14 +101,14 @@ public class DemoApplication implements CommandLineRunner {
 
 	@Scheduled( cron ="59 59 23 15-30 12 * " ) //스케줄러를 사용하여 일단위로 15~30일까지의 확률을 변동시킴과 동시에 데이터베이스에 업데이트함
 	public void every(){
-		Date nowdate=new Date();
-		String tlrks=simpleDateFormat.format(nowdate);
-		TotalEvent total= TotalEvent.builder().luckyday(new Date()).build();
-		totalEventRepository.save(total);//오늘 사용할 값을 미리생성해줌 id만존재 나머지는 null값으로 존재
-		//luckyday에서 -1 을해줘서 어제날짜 기준으로 값을 수정함 수정할것은 daily_quota<<이것은 daliy_event에서 sum으로 이벤트
-		//진행일수 기준으로 가져와서 업데이트해주면됌.
-		//그후 각종 변수값들을 초기화 시켜줌.
-		String tlrksup="";//여기는 day에 1일더해서 만들어주어야함
+		LocalDate currentDate = LocalDate.now();
+		String tlrks=simpleDateFormat.format(currentDate);
+		TotalEvent total1= TotalEvent.builder().luckyday(new Date()).dailyQuota(
+				dailyEventRepository.totalpeple(tlrks)
+		).build();
+		totalEventRepository.save(total);//업데이트 시켜줌
+		LocalDate newDate = currentDate.plusDays(1);
+		String tlrksup=simpleDateFormat.format(newDate);//여기는 day에 1일더해서 만들어주어야함
 		first=dailyEventRepository.firstcheck(tlrksup);
 		second=dailyEventRepository.secondcheck(tlrksup);
 		third=dailyEventRepository.thirdcheck(tlrksup);
@@ -112,6 +118,11 @@ public class DemoApplication implements CommandLineRunner {
 		firstcut=(int)Math.ceil(firstlimit/7.2); // 총이벤트일수 15일동안 총 1~4등당첨을 모두하려면 10800/15=720 이므로
 		secondcut=(int)Math.ceil(secondlimit/7.2);// 하루응모인원 기준을 720명으로 잡고 계산하여
 		thirdcut=(int)Math.ceil(thirdlimit/7.2); //전날과비교하여 1~3등의 당첨이 적을경우 확률을 변동시킨다.
+		Data tomorroy=simpleDateFormat.parse(tlrksup);
+		TotalEvent total2= TotalEvent.builder().luckyday(new Date()).dailyQuota(
+				dailyEventRepository.totalpeple(tlrks)
+		).build();
+		totalEventRepository.save(total2);//업데이트 시켜줌
 	}
 
 	public String  random(){
