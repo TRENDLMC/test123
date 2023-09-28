@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import javax.persistence.*;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 @AllArgsConstructor
@@ -21,13 +21,12 @@ public class DailyEvent {
 
 
     @ManyToOne
-    @JoinColumn(name="eventday", insertable = false, updatable = false)
+    @JoinColumn(name="eventDay", insertable = false, updatable = false)
     private TotalEvent totalEvent;
 
-    private int eventday;
+    private int eventDay;
 
-    @Temporal(TemporalType.DATE)
-    private Date luckyday;
+    private LocalDate luckyDay;
 
     private String ranks;
 

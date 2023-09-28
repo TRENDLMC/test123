@@ -19,7 +19,7 @@ public class DailyLimit {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int everyday;
+    private int everyDay;
 
     private int first;
 

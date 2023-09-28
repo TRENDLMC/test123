@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 @NoArgsConstructor
@@ -18,10 +18,9 @@ public class TotalEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int eventday;
+    private int eventDay;
 
-    @Temporal(TemporalType.DATE)
-    private Date luckyday;
+    private LocalDate luckyDay;
 
     @Column(nullable = true)
     private int dailyQuota;
