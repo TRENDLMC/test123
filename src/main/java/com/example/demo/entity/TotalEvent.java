@@ -23,7 +23,22 @@ public class TotalEvent {
     @Column(nullable = true)
     private int dailyQuota;
 
+    @Column(nullable = true)
+    private int firstcut;
 
+    @Column(nullable = true)
+    private int firstpe;
 
+    @Column(nullable = true)
+    private int secondcut;
+
+    @Column(nullable = true)
+    private int secondpe;
+
+    @Column(nullable = true)
+    private int thirdcut;
+
+    @Column(nullable = true)
+    private int thirdpe;
 
 }

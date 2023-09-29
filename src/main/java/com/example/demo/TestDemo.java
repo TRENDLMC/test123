@@ -26,10 +26,17 @@ public class TestDemo {
     public int secondlimit=0;
     public int thirdlimit=0;
 
-    //확률조정을 위한 변수생성
+    //확률조정의 범위를 지정할 변수생성
     public int firstcut=0;
     public int secondcut=0;
     public int thirdcut=0;
+
+
+    // 범위를지정할 확률을 저장함.
+    int first_pe=0;
+    int second_pe=0;
+    int third_pe=0;
+
 
     private DailyEventRepository EventRepository;
 
@@ -39,9 +46,9 @@ public class TestDemo {
     private TotalEventRepository TotalRepository;
 
     public TestDemo(DailyEventRepository EventRepository, DailyLimitRepository LimitRepository, TotalEventRepository totalEventRepository){
-     this.EventRepository=EventRepository;
-     this.LimitRepository=LimitRepository;
-     this.TotalRepository=totalEventRepository;
+         this.EventRepository=EventRepository;
+         this.LimitRepository=LimitRepository;
+         this.TotalRepository=totalEventRepository;
     }
 
 
@@ -50,7 +57,7 @@ public class TestDemo {
         LocalDate currentDate = LocalDate.now();//이시간은 ex)17일 0시 0분이다
         for(int i=0; i<15; i++) {
             LocalDate notime=currentDate.plusDays(i);//i or 1
-            int peple =(int) (Math.random()*1000) + 100;
+            int peple =(int) (Math.random()*700) + 50;
             for (int j = 0; j < peple; j++) {
                 asd(notime);
             }
@@ -82,7 +89,6 @@ public class TestDemo {
 
         if(number<=secondcut) {
             if (second < secondlimit) {//오늘당첨자와 일별당첨자의 수를 비교해서 초과시 3등으로 변경,
-                System.out.println("2등당첨");
                 DailyEvent dailyEvent=DailyEvent.builder().eventDay(eventnumber).luckyDay(currentDate).ranks("2").build();
                 EventRepository.save(dailyEvent);
                 second++;
@@ -92,7 +98,6 @@ public class TestDemo {
 
         if(number<=thirdcut){
             if(third < thirdlimit){//오늘당첨자와 일별당첨자의 수를 비교해서 초과시 4등으로 변경,
-                System.out.println("3등당첨");
                 DailyEvent dailyEvent=DailyEvent.builder().eventDay(eventnumber).luckyDay(currentDate).ranks("3").build();
                 EventRepository.save(dailyEvent);
                 third++;
@@ -109,32 +114,43 @@ public class TestDemo {
 
         Optional<TotalEvent> select_Data=TotalRepository.findById(eventnumber);
 
-
-
         if(select_Data.isPresent()){
             TotalEvent update_Data = select_Data.get();
             update_Data.setDailyQuota(EventRepository.total_Peple(minus_Time));
+            update_Data.setFirstpe(first_pe);
+            update_Data.setSecondpe(second_pe);
+            update_Data.setThirdpe(third_pe);
+            update_Data.setFirstcut(firstcut);
+            update_Data.setSecondcut(secondcut);
+            update_Data.setThirdcut(thirdcut);
             TotalRepository.save(update_Data);//16일 데이터베이스를 업데이트해줌.
         }
 
         eventnumber++;//이벤트날짜를 증감시켜줌
-        String now_Time=currentDate.format(DateTimeFormatter.ofPattern("YYYYMMdd"));//date타입을 String으로 타입변환
-        rank_Check(now_Time);//오늘 날짜 ex)17일 기준으로 1~3등의 총당첨자수를 각각변수에 저장.
-        limit_Check(now_Time);//오늘 날짜 ex)17일경우 17일기준으로 1~3등의 총당첨돼어야하는 예상값을 각각 변수에 저장해줌.
 
-        TotalEvent new_Data= TotalEvent.builder().luckyDay(currentDate).build(); //17일의 tital2 객체생성.
-        TotalRepository.save(new_Data);//객체를 데이터 베이스에 삽입.
+        if(eventnumber<=15) {
+            String now_Time = currentDate.format(DateTimeFormatter.ofPattern("YYYYMMdd"));//date타입을 String으로 타입변환
+            rank_Check(now_Time);//오늘 날짜 ex)17일 기준으로 1~3등의 총당첨자수를 각각변수에 저장.
+            limit_Check(now_Time);//오늘 날짜 ex)17일경우 17일기준으로 1~3등의 총당첨돼어야하는 예상값을 각각 변수에 저장해줌.
 
-        daily_Peple_Update(now_Time); //17일 기준으로 총참여자를 가져온후 이벤트진행일자 2로나누어서 평균일별 참여자를구함.
-        change_Odds();//위에서 구한 평균값을 기준으로 123등의 확률을 변동해줌.
+            TotalEvent new_Data = TotalEvent.builder().luckyDay(currentDate).build(); //17일의 tital2 객체생성.
+            TotalRepository.save(new_Data);//객체를 데이터 베이스에 삽입.
 
+            daily_Peple_Update(now_Time); //17일 기준으로 총참여자를 가져온후 이벤트진행일자 2로나누어서 평균일별 참여자를구함.
+            change_Odds();//위에서 구한 평균값을 기준으로 123등의 확률을 변동해줌.
+        }
 
-
+        int limit=secondlimit+firstlimit+thirdlimit;//limit의 총합값을 구함.
+        if( limit >= 50 && eventnumber==15){//마지막날에 한정하여 123등의 합이 50이상일경우  모두채우지지않는경우를 대비하여 확률 조정함.
+            firstcut=daily_Peple;
+            secondcut=daily_Peple;
+            thirdcut=daily_Peple;
+        }
     }
 
     public void limit_Check(String time){
         //이벤트 진행일 기준로하여  총당첨자와 예상총당첨자의 수를 가져와서 차를 구해주고 전날 과락으로 인한 123등의 공백을 채우기위해 limit의 수를 증감시킴.
-        // 전날 과락이 없다면 일별 당첨자를 그대로 유지함. 0 1 1 2 2 3 3 4 4 5
+        // 전날 과락이 없다면 일별 당첨자를 그대로 유지함.
         firstlimit=LimitRepository.selectTotalFirst_Limit(eventnumber)-EventRepository.selectTotalFirst_Check(time);
         secondlimit=LimitRepository.selectTotalSecond_Limit(eventnumber)-EventRepository.selectTotalSecond_Check(time);
         thirdlimit=LimitRepository.selectTotalThird_Limit(eventnumber)-EventRepository.selectTotalThird_Check(time);
@@ -150,21 +166,25 @@ public class TestDemo {
 
     public void change_Odds(){
         //과락당첨자수와 일별참여자수를 계산하여 확률을 조정해줌.
-        double every_Peple=(double) daily_Peple /(double) 1000; //int 타입으로 나눗셈진행시 소수점숫자가 사라지기때문에
         //double타입으로 변경하여 값을 만들어서 설정해줌.
-        firstcut = (int) Math.ceil(firstlimit / every_Peple);
-        secondcut = (int) Math.ceil(secondlimit /every_Peple );
-        thirdcut = (int) Math.ceil(thirdlimit /every_Peple );
+        double first_Pec= (double) first_pe/(double) 100; //퍼센트값을 현재까지 참여한 평균인원값의 범위로 계산해준다.
+        double second_Pec= (double) second_pe/(double) 100;
+        double third_Pec= (double) third_pe/(double) 100;
+        firstcut = (int) Math.ceil((double)daily_Peple*first_Pec);
+        secondcut = (int) Math.ceil((double)daily_Peple*second_Pec);
+        thirdcut = (int) Math.ceil((double)daily_Peple*third_Pec);
     }
 
     public void daily_Peple_Update(String time){
-        Optional<Integer> number=TotalRepository.selectTotal_Peple(time);//null값 체크를위해 optional타입으로 받아줌.
+        Optional<Integer> number=TotalRepository.selectTotal_Peple(time);
 
-        if(number.isPresent()&& number.get()!=0) {//null값 체크
-            daily_Peple =(int) number.get()/eventnumber;//null값 체크후 총참여인원/현재진행일자로 값을 나누어서 저장해줌.
-            return;
-        }
-        daily_Peple=(int) daily_Peple/eventnumber;
+        int num = number.get()==0?720:number.get();
+
+        daily_Peple=(int) num/eventnumber;
+
+        first_pe = (int) Math.ceil((double) firstlimit/(double)daily_Peple*100);
+        second_pe = (int) Math.ceil((double) secondlimit/(double)daily_Peple*100);
+        third_pe = (int) Math.ceil((double) thirdlimit/(double)daily_Peple*100);
     }
 
 }
