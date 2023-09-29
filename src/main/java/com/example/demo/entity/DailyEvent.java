@@ -17,12 +17,13 @@ public class DailyEvent {
 
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+//
 
-
-    @ManyToOne
-    @JoinColumn(name="eventDay", insertable = false, updatable = false)
-    private TotalEvent totalEvent;
+//    @ManyToOne
+//    @JoinColumn(name="eventDay", insertable = false, updatable = false)
+//    private TotalEvent totalEvent;
 
     private int eventDay;
 

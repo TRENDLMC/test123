@@ -4,9 +4,11 @@ import com.example.demo.entity.DailyLimit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+@Repository
 public interface DailyLimitRepository extends JpaRepository<DailyLimit, Integer> {
 
 
