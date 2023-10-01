@@ -46,21 +46,26 @@ public class TestDemo {
     private TotalEventRepository TotalRepository;
 
     public TestDemo(DailyEventRepository EventRepository, DailyLimitRepository LimitRepository, TotalEventRepository totalEventRepository){
-         this.EventRepository=EventRepository;
-         this.LimitRepository=LimitRepository;
-         this.TotalRepository=totalEventRepository;
+        // 테스트 값을 셋팅해주기위해서 repository를 생성자를 통해서 호출한곳에서 repository를 가져옴.
+         this.EventRepository=EventRepository;//값대입.
+         this.LimitRepository=LimitRepository;//값대입.
+         this.TotalRepository=totalEventRepository;//값대입.
     }
 
 
     public void testrun()throws Exception{
+
         testdata();
         LocalDate currentDate = LocalDate.now();//이시간은 ex)17일 0시 0분이다
+
         for(int i=0; i<15; i++) {
-            LocalDate notime=currentDate.plusDays(i);//i or 1
-            int peple =(int) (Math.random()*700) + 50;
+
+            int peple =(int) (Math.random()*700) + 100;
+
             for (int j = 0; j < peple; j++) {
-                asd(notime);
+                made_Data(i);
             }
+
             LocalDate notimes=currentDate.plusDays(i+1);//i or 1
             every(notimes);
         }
@@ -75,60 +80,65 @@ public class TestDemo {
         change_Odds(); //위에서 일별평균방문자를 구한값으로 123등의 확률을 조정해줌.
     }
 
-    public void  asd(LocalDate currentDate){
-        int number = (int) (Math.random() * daily_Peple) + 1;
+    public void made_Data(int data){
 
-        if(number<=firstcut) {
+        int number = (int) (Math.random() * daily_Peple) + 1;//랜덤 당첨숫자를 생성해줌. 1~현재날짜까지의 참여자/일수가 최대값이됌.
+        LocalDate currentDate=LocalDate.now();//오늘날짜를 생성해줌.
+        LocalDate notime=currentDate.plusDays(data);
+
+        if(number<=firstcut) {//랜덤으로 생성된수와 오늘날짜기준으로 변동된 확률의범위의값과 비교함.
             if(first<firstlimit) { //오늘당첨자와 일별당첨자의 수를 비교해서 초과시 2등으로 변경,
-                first++;
-                DailyEvent dailyEvent=DailyEvent.builder().eventDay(eventnumber).luckyDay(currentDate).ranks("1").build();
-                EventRepository.save(dailyEvent);
-                return;
+                first++;//자바 변수에 오늘 날짜의 fisrt당첨자수를 저장함.
+                DailyEvent dailyEvent=DailyEvent.builder().eventDay(eventnumber).luckyDay(notime).ranks("1").build();
+                //dailyEvent 객체 생성후 값을 대입해줌.
+                EventRepository.save(dailyEvent);//데이터베이스에 값을 삽입해줌.
+                return;//모두 실행한뒤 아래로 내려갈수없도록 return시킴.
             }
         }
 
         if(number<=secondcut) {
             if (second < secondlimit) {//오늘당첨자와 일별당첨자의 수를 비교해서 초과시 3등으로 변경,
-                DailyEvent dailyEvent=DailyEvent.builder().eventDay(eventnumber).luckyDay(currentDate).ranks("2").build();
+                DailyEvent dailyEvent=DailyEvent.builder().eventDay(eventnumber).luckyDay(notime).ranks("2").build();
                 EventRepository.save(dailyEvent);
-                second++;
-                return;
+                second++;//자바 변수에 오늘 날짜의 second당첨자수를 저장함.
+                return;//모두 실행한뒤 아래로 내려갈수없도록 return시김.
             }
         }
 
         if(number<=thirdcut){
+
             if(third < thirdlimit){//오늘당첨자와 일별당첨자의 수를 비교해서 초과시 4등으로 변경,
-                DailyEvent dailyEvent=DailyEvent.builder().eventDay(eventnumber).luckyDay(currentDate).ranks("3").build();
+                DailyEvent dailyEvent=DailyEvent.builder().eventDay(eventnumber).luckyDay(notime).ranks("3").build();
                 EventRepository.save(dailyEvent);
-                third++;
-                return;
+                third++;//자바 변수에 오늘 날짜의 third당첨자수를 증감시킴
+                return;//모두 실행한뒤 아래로 내려갈수없도록 return시김.
             }
         }
-        EventRepository.save(DailyEvent.builder().eventDay(eventnumber).luckyDay(currentDate).ranks("4").build());
+        //위의 범위값안에 못들었을시 4등당첨후 값 생성후 저장후 종료.
+        EventRepository.save(DailyEvent.builder().eventDay(eventnumber).luckyDay(notime).ranks("4").build());
         return;
     }
 
     public void every(LocalDate currentDate)throws Exception{//기준 17일 으로 주석을 작성함.
+
         LocalDate newDate = currentDate.minusDays(1);//이날짜는 ex)16일 0시 0분이다.
         String minus_Time=newDate.format(DateTimeFormatter.ofPattern("YYYYMMdd"));;//16일날짜를 String타입으로 변환시킴.
 
-        Optional<TotalEvent> select_Data=TotalRepository.findById(eventnumber);
+        Optional<TotalEvent> select_Data=TotalRepository.findById(eventnumber);//아이디값을 기준으로 어제날짜의 totalEvent를 가져옴.
 
-        if(select_Data.isPresent()){
+        if(select_Data.isPresent()){//optinal을 사용하기위해서 null값체크해줌.
             TotalEvent update_Data = select_Data.get();
             update_Data.setDailyQuota(EventRepository.total_Peple(minus_Time));
-            update_Data.setFirstpe(first_pe);
-            update_Data.setSecondpe(second_pe);
-            update_Data.setThirdpe(third_pe);
-            update_Data.setFirstcut(firstcut);
-            update_Data.setSecondcut(secondcut);
-            update_Data.setThirdcut(thirdcut);
+            update_Data.setFirstpe(first_pe);//일등의퍼센트 저장 테스트용.
+            update_Data.setSecondpe(second_pe);//이등의퍼센트 저장 테스트용.
+            update_Data.setThirdpe(third_pe);//삼등으퍼센트 저장 테스트용.
+            update_Data.setFirstcut(firstcut);//일등의범위 저장 테스트용.
+            update_Data.setSecondcut(secondcut);//이등의범위 저장 테스트용.
+            update_Data.setThirdcut(thirdcut);//삼등의범위 저장 테스트용.
             TotalRepository.save(update_Data);//16일 데이터베이스를 업데이트해줌.
         }
 
         eventnumber++;//이벤트날짜를 증감시켜줌
-
-        if(eventnumber<=15) {
             String now_Time = currentDate.format(DateTimeFormatter.ofPattern("YYYYMMdd"));//date타입을 String으로 타입변환
             rank_Check(now_Time);//오늘 날짜 ex)17일 기준으로 1~3등의 총당첨자수를 각각변수에 저장.
             limit_Check(now_Time);//오늘 날짜 ex)17일경우 17일기준으로 1~3등의 총당첨돼어야하는 예상값을 각각 변수에 저장해줌.
@@ -138,14 +148,6 @@ public class TestDemo {
 
             daily_Peple_Update(now_Time); //17일 기준으로 총참여자를 가져온후 이벤트진행일자 2로나누어서 평균일별 참여자를구함.
             change_Odds();//위에서 구한 평균값을 기준으로 123등의 확률을 변동해줌.
-        }
-
-        int limit=secondlimit+firstlimit+thirdlimit;//limit의 총합값을 구함.
-        if( limit >= 50 && eventnumber==15){//마지막날에 한정하여 123등의 합이 50이상일경우  모두채우지지않는경우를 대비하여 확률 조정함.
-            firstcut=daily_Peple;
-            secondcut=daily_Peple;
-            thirdcut=daily_Peple;
-        }
     }
 
     public void limit_Check(String time){
@@ -170,9 +172,19 @@ public class TestDemo {
         double first_Pec= (double) first_pe/(double) 100; //퍼센트값을 현재까지 참여한 평균인원값의 범위로 계산해준다.
         double second_Pec= (double) second_pe/(double) 100;
         double third_Pec= (double) third_pe/(double) 100;
+
         firstcut = (int) Math.ceil((double)daily_Peple*first_Pec);
         secondcut = (int) Math.ceil((double)daily_Peple*second_Pec);
         thirdcut = (int) Math.ceil((double)daily_Peple*third_Pec);
+
+        int limit=secondlimit+firstlimit+thirdlimit;//limit의 총합값을 구함.
+
+        if(limit>81){//일별1,2,3등의 당첨자수 54명의 1.5배인 81명보다 모자를경우 확률을 올려줌.
+            firstcut*=1.5;
+            secondcut*=1.75;
+            thirdcut*=2;
+        }
+
     }
 
     public void daily_Peple_Update(String time){
@@ -182,9 +194,9 @@ public class TestDemo {
 
         daily_Peple=(int) num/eventnumber;
 
-        first_pe = (int) Math.ceil((double) firstlimit/(double)daily_Peple*100);
-        second_pe = (int) Math.ceil((double) secondlimit/(double)daily_Peple*100);
-        third_pe = (int) Math.ceil((double) thirdlimit/(double)daily_Peple*100);
+        first_pe = (int) Math.ceil((double) firstlimit/(double)daily_Peple*100); //범위를지정하기위해 퍼센테이지를 구해줌. 일별당첨자/총인원*100을해줌
+        second_pe = (int) Math.ceil((double) secondlimit/(double)daily_Peple*100);//범위를지정하기위해 퍼센테이지를 구해줌. 일별당첨자/총인원*100을해줌
+        third_pe = (int) Math.ceil((double) thirdlimit/(double)daily_Peple*100);//범위를지정하기위해 퍼센테이지를 구해줌. 일별당첨자/총인원*100을해줌
     }
 
 }
