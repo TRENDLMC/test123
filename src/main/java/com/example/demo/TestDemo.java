@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 public class TestDemo {
+
     public int eventnumber=1;//이벤트진행일자.
 
     public int daily_Peple=720;//총당첨자수는 10800명이기떄문에 /15 을 해주어 첫날에만 예상값 720으로 값을 처리함.
@@ -60,7 +61,7 @@ public class TestDemo {
 
         for(int i=0; i<15; i++) {
 
-            int peple =(int) (Math.random()*700) + 100;
+            int peple =(int) (Math.random()*1000) + 50;//하루 참여자는 최소 50명에서 1000명으로 랜덤으로 설정.
 
             for (int j = 0; j < peple; j++) {
                 made_Data(i);
@@ -77,7 +78,7 @@ public class TestDemo {
         rank_Check(time);//현재시간을 기준으로 오늘 당첨자수를 가져옴..
         limit_Check(time);//현재시간 기준으로 총당첨자-예상총당첨자 계산을하여 일별 당첨자제한을 가져옴.
         daily_Peple_Update(time);//현재시간 기준으로 총응모자를 가져온뒤 이벤트진행일자기준으로 나누어주어 평균일별 참여자를구함.
-        change_Odds(); //위에서 일별평균방문자를 구한값으로 123등의 확률을 조정해줌.
+        probability_Change(); //위에서 일별평균방문자를 구한값으로 123등의 확률을 조정해줌.
     }
 
     public void made_Data(int data){
@@ -114,6 +115,14 @@ public class TestDemo {
                 return;//모두 실행한뒤 아래로 내려갈수없도록 return시김.
             }
         }
+
+        if(eventnumber==15) {//마지막날의 경우 4등을 제외 1~3등을 우선 당첨후 4등이 당첨돼도록만들어둠.
+            if (first != firstlimit || second != secondlimit || third != thirdlimit) {//1~3등이 모두 당첨후 4등이 당첨됌.
+                made_Data(data);//확률프로그램을 재실행.
+                return;//그후 return시킴.
+            }
+        }
+
         //위의 범위값안에 못들었을시 4등당첨후 값 생성후 저장후 종료.
         EventRepository.save(DailyEvent.builder().eventDay(eventnumber).luckyDay(notime).ranks("4").build());
         return;
@@ -147,7 +156,7 @@ public class TestDemo {
             TotalRepository.save(new_Data);//객체를 데이터 베이스에 삽입.
 
             daily_Peple_Update(now_Time); //17일 기준으로 총참여자를 가져온후 이벤트진행일자 2로나누어서 평균일별 참여자를구함.
-            change_Odds();//위에서 구한 평균값을 기준으로 123등의 확률을 변동해줌.
+            probability_Change();//위에서 구한 평균값을 기준으로 123등의 확률을 변동해줌.
     }
 
     public void limit_Check(String time){
@@ -166,7 +175,7 @@ public class TestDemo {
         third=EventRepository.selectThird_Check(time);
     }
 
-    public void change_Odds(){
+    public void probability_Change(){
         //과락당첨자수와 일별참여자수를 계산하여 확률을 조정해줌.
         //double타입으로 변경하여 값을 만들어서 설정해줌.
         double first_Pec= (double) first_pe/(double) 100; //퍼센트값을 현재까지 참여한 평균인원값의 범위로 계산해준다.
@@ -177,22 +186,14 @@ public class TestDemo {
         secondcut = (int) Math.ceil((double)daily_Peple*second_Pec);
         thirdcut = (int) Math.ceil((double)daily_Peple*third_Pec);
 
-        int limit=secondlimit+firstlimit+thirdlimit;//limit의 총합값을 구함.
-
-        if(limit>81){//일별1,2,3등의 당첨자수 54명의 1.5배인 81명보다 모자를경우 확률을 올려줌.
-            firstcut*=1.5;
-            secondcut*=1.75;
-            thirdcut*=2;
-        }
-
     }
 
     public void daily_Peple_Update(String time){
         Optional<Integer> number=TotalRepository.selectTotal_Peple(time);
 
-        int num = number.get()==0?720:number.get();
+        int num = number.get() == 0 ? 720 : number.get(); //삼항연산자를 통해서 number 의 값을 체크해줌 0일경우 720를 대입 아니면 number.get()를 대입해줌.
 
-        daily_Peple=(int) num/eventnumber;
+        daily_Peple=(int) num/eventnumber;//참여한인원수 나누기 이벤트날짜로 현날짜까지의 평균 인원수를 구해줌.
 
         first_pe = (int) Math.ceil((double) firstlimit/(double)daily_Peple*100); //범위를지정하기위해 퍼센테이지를 구해줌. 일별당첨자/총인원*100을해줌
         second_pe = (int) Math.ceil((double) secondlimit/(double)daily_Peple*100);//범위를지정하기위해 퍼센테이지를 구해줌. 일별당첨자/총인원*100을해줌

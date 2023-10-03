@@ -94,10 +94,11 @@ public class DemoApplication implements CommandLineRunner {
 
 		daily_Peple_Update(time);//현재시간 기준으로 총응모자를 가져온뒤 이벤트진행일자기준으로 나누어주어 평균일별 참여자를구함.
 
-		change_Odds(); //위에서 일별평균방문자를 구한값으로 123등의 확률을 조정해줌.
+		probability_Change(); //위에서 일별평균방문자를 구한값으로 123등의 확률을 조정해줌.
 
 		TestDemo TestDemo =new TestDemo(EventRepository,LimitRepository,TotalRepository); //테스트코드 객체 생성. 생성자에 repository넣어줌.
 		TestDemo.testrun();// 테스트코드 실행.
+		System.out.println("끝");
 	}
 
 	@Scheduled( cron ="01 00 00 17-30 12 *" ) //스케줄러를 사용하여 일단위로 15~30일까지의 확률을 변동시킴과 동시에 데이터베이스에 업데이트함
@@ -127,9 +128,7 @@ public class DemoApplication implements CommandLineRunner {
 		TotalRepository.save(new_Data);//객체를 데이터 베이스에 삽입.
 
 		daily_Peple_Update(now_Time); //17일 기준으로 총참여자를 가져온후 이벤트진행일자 2로나누어서 평균일별 참여자를구함.
-		change_Odds();//위에서 구한 평균값을 기준으로 123등의 확률을 변동해줌.
-
-
+		probability_Change();//위에서 구한 평균값을 기준으로 123등의 확률을 변동해줌.
 
 	}
 
@@ -168,6 +167,14 @@ public class DemoApplication implements CommandLineRunner {
 				return;//모두 실행한뒤 아래로 내려갈수없도록 return시김.
 			}
 		}
+
+		if(eventnumber==15) {//마지막날의 경우 4등을 제외 1~3등을 우선 당첨후 4등이 당첨돼도록만들어둠.
+			if (first != firstlimit || second != secondlimit || third != thirdlimit) {//1~3등이 모두 당첨후 4등이 당첨됌.
+				made_Data();//확률프로그램을 재실행.
+				return;
+			}
+		}
+
 		//위의 범위값안에 못들었을시 4등당첨후 값 생성후 저장후 종료.
 		EventRepository.save(DailyEvent.builder().eventDay(eventnumber).luckyDay(currentDate).ranks("4").build());
 		return;
@@ -189,7 +196,7 @@ public class DemoApplication implements CommandLineRunner {
 		third=EventRepository.selectThird_Check(time);
 	}
 
-	public void change_Odds(){
+	public void probability_Change(){
 		//과락당첨자수와 일별참여자수를 계산하여 확률을 조정해줌.
 		double first_Pec= (double) first_pe/(double) 100; //계산을 하기위해서 퍼센트로 만들어줌.
 		double second_Pec= (double) second_pe/(double) 100;
@@ -198,13 +205,6 @@ public class DemoApplication implements CommandLineRunner {
 		firstcut = (int) Math.ceil((double)daily_Peple*first_Pec);//범위값을 계산을 통해 셋팅해줌.
 		secondcut = (int) Math.ceil((double)daily_Peple*second_Pec);
 		thirdcut = (int) Math.ceil((double)daily_Peple*third_Pec);
-
-		int limit=secondlimit+firstlimit+thirdlimit;//limit의 총합값을 구함.
-		if(limit>=54 && eventnumber>10){//10일이후에 일별1,2,3등의 당첨자수보다 부족할경우 확률을 1.5배로 올려줌.
-			firstcut*=2;
-			secondcut*=2;
-			thirdcut*=2;
-		}
 	}
 
 	public void daily_Peple_Update(String time) {
